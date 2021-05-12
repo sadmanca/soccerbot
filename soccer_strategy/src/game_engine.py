@@ -68,7 +68,7 @@ class GameEngine:
         self.strategy = DummyStrategy()
 
     def run(self):
-        game_period_steps = int(2 * 10 * 60 / GameEngine.PHYSICS_UPDATE_INTERVAL)  # 2 Periods of 10 minutes each
+        game_period_steps = int(2 * 2 * 60 / GameEngine.PHYSICS_UPDATE_INTERVAL)  # 2 Periods of 2 minutes each
 
         friendly_points = 0
         opponent_points = 0
@@ -116,6 +116,9 @@ class GameEngine:
                 color = 'red'
             else:
                 color = 'green'
+
+            if robot.status == Robot.Status.FALLEN_BACK:
+                color = 'yellow'
             foreground.add_patch(plt.Circle((x, y), 0.08, color=color))
 
             arrow_len = 0.3
@@ -146,14 +149,26 @@ class GameEngine:
                     continue
 
                 unit = delta / np.linalg.norm(delta)
-
-                # TODO if walk into another robot, stop moving and fallback
-
                 robot.position[0:2] = robot.get_position()[0:2] + unit * robot.speed * GameEngine.PHYSICS_UPDATE_INTERVAL
+                for otherRobot in robots:
+                    position_equal = (abs(robot.position[0:2].round(2) - otherRobot.position[0:2].round(2)) < [0.08, 0.08]).all()
+                    if position_equal and robot != otherRobot:
+                        robot.status = Robot.Status.FALLEN_BACK
+                        otherRobot.status = Robot.Status.FALLEN_BACK
+                print(abs(robot.position[0:2].round(2) - otherRobot.position[0:2].round(2)))
+                print(position_equal and robot != otherRobot)
+            # TODO if walk into another robot, stop moving and fallback
+            elif robot.status == Robot.Status.FALLEN_BACK or robot.status == Robot.Status.FALLEN_FRONT:
+                if robot.fallen_timeout == 0:
+                    robot.status = Robot.Status.WALKING
+                    robot.fallen_timeout = 100
+                elif robot.fallen_timeout > 0:
+                    robot.fallen_timeout -= 1
+                    print(robot.fallen_timeout)
             elif robot.status == Robot.Status.KICKING:
                 if ball.kick_timeout == 0:
                     ball.velocity = robot.kick_velocity
-                    ball.kick_timeout = 5
+                    ball.kick_timeout = 10
                 robot.status = Robot.Status.READY
 
         # Ball
@@ -161,8 +176,13 @@ class GameEngine:
             ball.kick_timeout = ball.kick_timeout - 1
 
         # TODO If ball hits a person, bounce
+        if (abs(robot.position[0:2].round(2) - otherRobot.position[0:2].round(2)) < [0.08, 0.08]).all():
+            ball.velocity = ball.velocity*-1
+            print('Bounce!')
+
         ball.position = ball.get_position() + ball.get_velocity() * GameEngine.PHYSICS_UPDATE_INTERVAL
         ball.velocity = ball.velocity * Ball.FRICTION_COEFF
+
 
     def resetRobots(self):
         self.robots = copy.deepcopy(self.robots_init)
