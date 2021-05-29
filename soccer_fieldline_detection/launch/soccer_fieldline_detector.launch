@@ -1,5 +1,9 @@
 <launch>
 
+<!--    roslaunch soccer_fieldline_detection soccer_fieldline_detector.launch-->
+    <!-- Line and goal detection -->
+    <node pkg="soccer_fieldline_detection" type="test_node" name="test_node"
+          output="screen" >
 
-
+    </node>
 </launch>

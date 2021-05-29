@@ -234,12 +234,12 @@ void SoccerFieldlineDetector::imageCallback(const sensor_msgs::ImageConstPtr &ms
 
 
 
-int main(int argc, char **argv) {
-    ros::init(argc, argv, "soccer_fieldline_detector");
-
-    SoccerFieldlineDetector detector;
-
-    ros::spin();
-
-    return 0;
-}
+//int main(int argc, char **argv) {
+//    ros::init(argc, argv, "soccer_fieldline_detector");
+//
+//    SoccerFieldlineDetector detector;
+//
+//    ros::spin();
+//
+//    return 0;
+//}
