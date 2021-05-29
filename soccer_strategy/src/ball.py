@@ -7,7 +7,8 @@ class Ball:
     def __init__(self, position):
         self.position = position
         self.velocity = np.array([0, 0])
-        self.kick_timeout = 0
+        self.kick_timeout = 5
+        self.bounce_counter = 0
 
     def get_position(self):
         return self.position

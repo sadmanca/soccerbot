@@ -33,7 +33,7 @@ class Robot:
         self.status = status
         self.position = position
         self.goal_position = position
-        self.fallen_timeout = 5
+        self.fallen_timeout = 10
 
         self.speed = 0.20
         self.max_kick_speed = 2

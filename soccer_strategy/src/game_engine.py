@@ -60,7 +60,7 @@ class GameEngine:
         background.add_patch(plt.Rectangle((-1.3, -4.55), 2.6, 0.05, color='blue'))
         background.add_patch(plt.Rectangle((-1.3, 4.5), 2.6, 0.05, color='blue'))
         background.add_line(plt.Line2D((-3, 3), (0, 0), color='blue'))
-        background.add_patch(plt.Circle((-0, 0), 1.3 / 2, fill=None, color='blue'))
+        background.add_patch(plt.Circle((-0, 0), 13/ 2, fill=None, color='blue'))
         foreground = fig.add_axes([0, 0, 1, 1])
         foreground.set_facecolor((0, 0, 0, 0))
 
@@ -141,6 +141,7 @@ class GameEngine:
 
     def updateEstimatedPhysics(self, robots, ball):
         # Robot do action in a random priority order
+
         for robot in sorted(robots,key=lambda _: random.random()):
             # TODO use the same trajectory as in soccer_pycontrol
             if robot.status == Robot.Status.WALKING:
@@ -151,20 +152,17 @@ class GameEngine:
                 unit = delta / np.linalg.norm(delta)
                 robot.position[0:2] = robot.get_position()[0:2] + unit * robot.speed * GameEngine.PHYSICS_UPDATE_INTERVAL
                 for otherRobot in robots:
-                    position_equal = (abs(robot.position[0:2].round(2) - otherRobot.position[0:2].round(2)) < [0.08, 0.08]).all()
+                    position_equal = (abs(robot.position[0:2].round(2) - otherRobot.position[0:2].round(2)) < [0.16, 0.16]).all()
                     if position_equal and robot != otherRobot:
                         robot.status = Robot.Status.FALLEN_BACK
                         otherRobot.status = Robot.Status.FALLEN_BACK
-                print(abs(robot.position[0:2].round(2) - otherRobot.position[0:2].round(2)))
-                print(position_equal and robot != otherRobot)
             # TODO if walk into another robot, stop moving and fallback
             elif robot.status == Robot.Status.FALLEN_BACK or robot.status == Robot.Status.FALLEN_FRONT:
                 if robot.fallen_timeout == 0:
                     robot.status = Robot.Status.WALKING
-                    robot.fallen_timeout = 100
+                    robot.fallen_timeout = 10
                 elif robot.fallen_timeout > 0:
                     robot.fallen_timeout -= 1
-                    print(robot.fallen_timeout)
             elif robot.status == Robot.Status.KICKING:
                 if ball.kick_timeout == 0:
                     ball.velocity = robot.kick_velocity
@@ -176,9 +174,15 @@ class GameEngine:
             ball.kick_timeout = ball.kick_timeout - 1
 
         # TODO If ball hits a person, bounce
-        if (abs(robot.position[0:2].round(2) - otherRobot.position[0:2].round(2)) < [0.08, 0.08]).all():
-            ball.velocity = ball.velocity*-1
-            print('Bounce!')
+        if (abs(robot.position[0:2].round(2) - ball.position[0:2].round(2)) < [0.08 + 0.25/math.pi, 0.08 + 0.25/math.pi]).all() and robot.status != Robot.Status.KICKING:
+            ball.velocity = ball.velocity * -1
+            '''
+            ball_velo_theta = math.atan(ball.position[1]/ball.position[0])
+            ball.velocity[0] = ball.velocity[0]*math.cos(ball_velo_theta)
+            ball.velocity[1] = ball.velocity[1]*math.sin(ball_velo_theta)
+            '''
+            ball.bounce_counter += 1
+            print('Bounce! '+str(ball.bounce_counter))
 
         ball.position = ball.get_position() + ball.get_velocity() * GameEngine.PHYSICS_UPDATE_INTERVAL
         ball.velocity = ball.velocity * Ball.FRICTION_COEFF
