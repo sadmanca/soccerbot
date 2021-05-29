@@ -23,6 +23,7 @@ class BallDetector {
     ros::Publisher head_rotator_0;
     ros::Publisher head_rotator_1;
     std::string competition;
+    std::string name;
     float frequency = 0.2f;
     float max_angle = M_PI / 4.f;
     int last_t = 0;
@@ -41,6 +42,11 @@ public:
             ros::Duration(1.0).sleep();
         }
         n.getParam("competition", competition);
+
+        while(!n.hasParam("name")) {
+            ros::Duration(1.0).sleep();
+        }
+        n.getParam("name", name);
     }
     // catch names of the controllers availables on ROS network
 
@@ -49,7 +55,7 @@ public:
 
         bool has_pose = false;
 //        try {
-//            ball_pose = tfBuffer.lookupTransform("ball", "torso",ros::Time(0));
+//            ball_pose = tfBuffer.lookupTransform(name + "/ball", name + "/torso",ros::Time(0));
 //            //has_pose = true;
 //        } catch (tf2::TransformException &ex) {
 //            has_pose = false;
