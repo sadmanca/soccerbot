@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-import rospy
+
 from std_msgs.msg import String, Float64
 from sensor_msgs import JointState
 import tf
+import rospy
+import std_msgs.msg
 
+import signal
 
 # soccer_webot/scripts/start_single.py for param
 # soccer_traject/src//trajectory.py for fillign out jointstate
