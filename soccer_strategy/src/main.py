@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-from game_engine_ros import GameEngineRos
+import sys
+from game_engine import GameEngine
+from game_engine_competition import GameEngineCompetition
 import rospy
+_IN_ROS = False
 
 if __name__ == '__main__':
-    rospy.init_node("soccer_strategy")
-    rospy.logerr("Waiting")
-    rospy.sleep(10)
-
-    g = GameEngineRos()
-    g.run()
+    if _IN_ROS:
+        rospy.init_node("soccer_strategy")
+        g = GameEngineCompetition()
+        g.run()
+    else:
+        g = GameEngine()
+        g.run()

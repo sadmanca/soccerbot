@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 import os
 import sys
+import rospy
 if "ROS_NAMESPACE" not in os.environ:
     os.environ["ROS_NAMESPACE"] = "/robot1"
-import rospy
+
 from sensor_msgs.msg import Image
 import std_msgs
 from cv_bridge import CvBridge
@@ -30,18 +31,14 @@ class ObjectDetectionNode(object):
         self.image = None
         self.image_header = None
         self.br = CvBridge()
-
+        self.loop_rate = rospy.Rate(10) # Hz
         self.pub_detection = rospy.Publisher('detection_image', Image, queue_size=10)
         self.pub_boundingbox = rospy.Publisher('object_bounding_boxes', BoundingBoxes, queue_size=10)
         rospy.Subscriber("camera/image_raw",Image, self.callback)
 
-        self.model = CNN(kernel=3, num_features=8)
+        self.model = CNN(kernel=3, num_features=16)
 
-        if os.getenv('COMPETITION', 'false') == 'true':
-            self.model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-        else:
-            self.model.load_state_dict(torch.load(model_path))
-
+        self.model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
         self.model.eval()
 
     def callback(self, msg):
@@ -50,16 +47,15 @@ class ObjectDetectionNode(object):
         self.image = self.br.imgmsg_to_cv2(msg)
 
     def start(self):
-        loop_rate = rospy.Rate(10)  # Hz
         while not rospy.is_shutdown():
-
+            br = CvBridge()
             if self.image is not None:
                 img = self.image[:,:,:3] # get rid of alpha channel
-
-                dim = (640//3, 480//3) # (213, 160)
+                scale = 480 / 300
+                dim = (int(640 / scale), 300)
                 img = cv2.resize(img, dsize=dim, interpolation=cv2.INTER_AREA)
 
-                w, h = 200, 150
+                w, h = 400, 300
                 y, x, _ = img.shape # 160, 213
                 x_offset = x/2 - w/2
                 y_offset = y/2 - h/2
@@ -79,10 +75,10 @@ class ObjectDetectionNode(object):
                 bbs_msg = BoundingBoxes()
                 bb_msg = BoundingBox()
                 for ball_bb in bbxs[Label.BALL.value]:
-                    bb_msg.xmin = int((ball_bb[0] + x_offset) * 3)
-                    bb_msg.ymin = int((ball_bb[1] + y_offset) * 3)
-                    bb_msg.xmax = int((ball_bb[2] + x_offset) * 3)
-                    bb_msg.ymax = int((ball_bb[3] + y_offset) * 3)
+                    bb_msg.xmin = int((ball_bb[0] + x_offset) * scale)
+                    bb_msg.ymin = int((ball_bb[1] + y_offset) * scale)
+                    bb_msg.xmax = int((ball_bb[2] + x_offset) * scale)
+                    bb_msg.ymax = int((ball_bb[3] + y_offset) * scale)
                     bb_msg.id = Label.BALL.value
                     bb_msg.Class = 'ball'
                 bbs_msg.bounding_boxes = [bb_msg]
@@ -90,10 +86,10 @@ class ObjectDetectionNode(object):
                 big_enough_robot_bbxs = []
                 for robot_bb in bbxs[Label.ROBOT.value]:
                     bb_msg = BoundingBox()
-                    bb_msg.xmin = int((robot_bb[0] + x_offset) * 3)
-                    bb_msg.ymin = int((robot_bb[1] + y_offset) * 3)
-                    bb_msg.xmax = int((robot_bb[2] + x_offset) * 3)
-                    bb_msg.ymax = int((robot_bb[3] + y_offset) * 3)
+                    bb_msg.xmin = int((robot_bb[0] + x_offset) * scale)
+                    bb_msg.ymin = int((robot_bb[1] + y_offset) * scale)
+                    bb_msg.xmax = int((robot_bb[2] + x_offset) * scale)
+                    bb_msg.ymax = int((robot_bb[3] + y_offset) * scale)
                     bb_msg.id = Label.ROBOT.value
                     bb_msg.Class = 'robot'
                     # ignore small boxes
@@ -111,12 +107,9 @@ class ObjectDetectionNode(object):
                 img = util.torch_to_cv(img_torch)
 
                 self.pub_boundingbox.publish(bbs_msg)
-                self.pub_detection.publish(self.br.cv2_to_imgmsg(img))
-        try:
-            loop_rate.sleep()
-        except rospy.exceptions.ROSInterruptException as ex:
-            print(ex)
-            exit(0)
+                self.pub_detection.publish(br.cv2_to_imgmsg(img))
+            self.loop_rate.sleep()
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

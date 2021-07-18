@@ -1,7 +1,4 @@
 import os
-
-import pybullet as pb
-import numpy as np
 import enum
 from transformation import Transformation as tr
 import matplotlib.pyplot as plt
@@ -9,6 +6,11 @@ from robotpath import Robotpath
 import math
 from os.path import expanduser
 from copy import deepcopy
+import numpy as np
+import rospy
+
+if os.getenv('ENABLE_PYBULLET', False):
+    import pybullet as pb
 
 
 class Joints(enum.IntEnum):
@@ -64,9 +66,8 @@ class Soccerbot:
     foot_box = [0.09, 0.07, 0.01474]
     right_collision_center = [0.00385, 0.00401, -0.00737]
     pybullet_offset = [0.0082498, -0.0017440, -0.0522479]
-    arm_0_center = -0.25
-    arm_1_center = np.pi * 0.75
-
+    arm_0_center = -0.45
+    arm_1_center = np.pi * 0.8
 
     def get_angles(self):
         """
@@ -76,7 +77,6 @@ class Soccerbot:
 
         return [a + b for a, b in zip(self.configuration, self.configuration_offset)]
 
-
     def get_link_transformation(self, link1, link2):
         """
         Gives the H-trasnform between two links
@@ -84,25 +84,44 @@ class Soccerbot:
         :param link2: Ending link
         :return: H-transform from starting link to the ending link
         """
-        if link1 == Links.TORSO:
-            link1world = pb.getBasePositionAndOrientation(self.body)
-            link1world = (tuple(np.subtract(link1world[0], tuple(self.pybullet_offset))), (0, 0, 0, 1))
+        if os.getenv('ENABLE_PYBULLET', False):
+            if link1 == Links.TORSO:
+                link1world = pb.getBasePositionAndOrientation(self.body)
+                link1world = (tuple(np.subtract(link1world[0], tuple(self.pybullet_offset))), (0, 0, 0, 1))
+            else:
+                link1world = pb.getLinkState(self.body, link1)[4:6]
+
+            if link2 == Links.TORSO:
+                link2world = pb.getBasePositionAndOrientation(self.body)
+                link2world = (tuple(np.subtract(link2world[0], tuple(self.pybullet_offset))), (0, 0, 0, 1))
+            else:
+                link2world = pb.getLinkState(self.body, link2)[4:6]
+
+            link1worldrev = pb.invertTransform(link1world[0], link1world[1])
+            link2worldrev = pb.invertTransform(link2world[0], link2world[1])
+
+            final_transformation = pb.multiplyTransforms(link2world[0], link2world[1], link1worldrev[0],
+                                                         link1worldrev[1])
+            return tr(np.round(list(final_transformation[0]), 5), np.round(list(final_transformation[1]), 5))
         else:
-            link1world = pb.getLinkState(self.body, link1)[4:6]
+            if link1 == Links.RIGHT_LEG_4 and link2 == Links.RIGHT_LEG_3:
+                matrix = [[0., -0., 0.089], [0., 0., 0., 1.]]
+            elif link1 == Links.RIGHT_LEG_5 and link2 == Links.RIGHT_LEG_4:
+                matrix = [[0., 0., 0.0827], [0., -0., 0., 1.]]
+            elif link1 == Links.TORSO and link2 == Links.RIGHT_LEG_1:
+                matrix = [[0.0135, -0.035, -0.156], [0., -0., 0., 1.]]
+            elif link1 == Links.LEFT_LEG_1 and link2 == Links.RIGHT_LEG_1:
+                matrix = [[0., -0.07, 0.], [0., -0., 0., 1.]]
+            elif link1 == Links.RIGHT_LEG_1 and link2 == Links.TORSO:
+                matrix = [[-0.0135, 0.035, 0.156], [0., -0., 0., 1.]]
+            elif link1 == Links.TORSO and link2 == Links.RIGHT_LEG_6:
+                matrix = [[0.0135, -0.035, -0.3277], [0., -0., 0., 1.]]
+            elif link1 == Links.TORSO and link2 == Links.LEFT_LEG_6:
+                matrix = [[0.0135, 0.035, -0.3277], [0., -0., 0., 1.]]
 
-        if link2 == Links.TORSO:
-            link2world = pb.getBasePositionAndOrientation(self.body)
-            link2world = (tuple(np.subtract(link2world[0], tuple(self.pybullet_offset))), (0, 0, 0, 1))
-        else:
-            link2world = pb.getLinkState(self.body, link2)[4:6]
+            return tr(matrix[0], matrix[1])  # tr(matrix)
 
-        link1worldrev = pb.invertTransform(link1world[0], link1world[1])
-        link2worldrev = pb.invertTransform(link2world[0], link2world[1])
-
-        final_transformation = pb.multiplyTransforms(link2world[0], link2world[1], link1worldrev[0], link1worldrev[1])
-        return tr(np.round(list(final_transformation[0]), 5), np.round(list(final_transformation[1]), 5))
-
-    def __init__(self, pose):
+    def __init__(self, pose, useFixedBase=False):
         """
         Contsructor for the soccerbot. Loads the robot into the pybullet simulation.
         :param position: transformation
@@ -111,12 +130,13 @@ class Soccerbot:
         home = expanduser("~")
         if os.environ['USER'] == 'shahryar':
             home = home + "/hdd"
-        self.body = pb.loadURDF(home + "/catkin_ws/src/soccerbot/soccer_description/models/soccerbot_stl.urdf",
-                                useFixedBase=False,
-                                flags=pb.URDF_USE_INERTIA_FROM_FILE,
-                                basePosition=[pose.get_position()[0], pose.get_position()[1],
-                                              Soccerbot.standing_hip_height],
-                                baseOrientation=pose.get_orientation())
+        if os.getenv('ENABLE_PYBULLET', False):
+            self.body = pb.loadURDF(home + "/catkin_ws/src/soccerbot/soccer_description/models/soccerbot_stl.urdf",
+                                    useFixedBase=useFixedBase,
+                                    flags=pb.URDF_USE_INERTIA_FROM_FILE,
+                                    basePosition=[pose.get_position()[0], pose.get_position()[1],
+                                                  Soccerbot.standing_hip_height],
+                                    baseOrientation=pose.get_orientation())
 
         # IMU Stuff
         self.prev_lin_vel = [0, 0, 0]
@@ -152,21 +172,17 @@ class Soccerbot:
         self.configuration = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.configuration_offset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.max_forces = []
-        for i in range(0, 20):
-            self.max_forces.append(pb.getJointInfo(self.body, i)[10])
+        if os.getenv('ENABLE_PYBULLET', False):
+            for i in range(0, 20):
+                self.max_forces.append(pb.getJointInfo(self.body, i)[10])
 
-        pb.setJointMotorControlArray(bodyIndex=self.body,
-                                     controlMode=pb.POSITION_CONTROL,
-                                     jointIndices=list(range(0, 20, 1)),
-                                     targetPositions=self.get_angles(),
-                                     forces=self.max_forces)
+            pb.setJointMotorControlArray(bodyIndex=self.body,
+                                         controlMode=pb.POSITION_CONTROL,
+                                         jointIndices=list(range(0, 20, 1)),
+                                         targetPositions=self.get_angles(),
+                                         forces=self.max_forces)
 
         self.current_step_time = 0
-
-        # For PID controller
-        self.pid_last_error = 0
-        self.last_F = 0
-        self.lastError = 0
 
         # For head rotation
         self.head_step = 0
@@ -195,11 +211,18 @@ class Soccerbot:
         thetas = self.inverseKinematicsLeftFoot(np.copy(self.left_foot_init_position))
         self.configuration[Links.LEFT_LEG_1:Links.LEFT_LEG_6 + 1] = thetas[0:6]
 
-        pb.setJointMotorControlArray(bodyIndex=self.body,
-                                     controlMode=pb.POSITION_CONTROL,
-                                     jointIndices=list(range(0, 20, 1)),
-                                     targetPositions=self.get_angles(),
-                                     forces=self.max_forces)
+        # head
+        self.configuration[Joints.HEAD_1] = 0
+        self.configuration[Joints.HEAD_2] = 0
+
+        self.configuration_offset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        if os.getenv('ENABLE_PYBULLET', False):
+            pb.setJointMotorControlArray(bodyIndex=self.body,
+                                         controlMode=pb.POSITION_CONTROL,
+                                         jointIndices=list(range(0, 20, 1)),
+                                         targetPositions=self.get_angles(),
+                                         forces=self.max_forces)
 
     def inverseKinematicsRightFoot(self, transformation):
         """
@@ -264,7 +287,7 @@ class Soccerbot:
         [theta1, theta2, theta3, theta4, theta5, theta6] = self.inverseKinematicsRightFoot(transformation)
         return [-theta1, -theta2, theta3, theta4, theta5, -theta6]
 
-    def setPose(self, pose):
+    def setPose(self, pose: tr):
         try:
             last_hip_height = self.pose.get_position()[2]
         except:
@@ -272,10 +295,15 @@ class Soccerbot:
             last_hip_height = Soccerbot.standing_hip_height
 
         self.pose.set_position([pose.get_position()[0], pose.get_position()[1], last_hip_height])
-        self.pose.set_orientation([0, 0, 0, 1])
-        pb.resetBasePositionAndOrientation(self.body, self.pose.get_position(), self.pose.get_orientation())
 
-    def setGoal(self, finishPosition):
+        # Remove the roll and yaw from the pose
+        [r, p, y] = pose.get_orientation_euler()
+        q_new = tr.get_quaternion_from_euler([r, 0, 0])
+        self.pose.set_orientation(q_new)
+        if os.getenv('ENABLE_PYBULLET', False):
+            pb.resetBasePositionAndOrientation(self.body, self.pose.get_position(), self.pose.get_orientation())
+
+    def setGoal(self, finishPosition: tr):
         """
         Returns the trajectories for the robot's feet and crotch. The coordinates x,y will be used only.
         :param finishPosition: #TODO
@@ -284,6 +312,11 @@ class Soccerbot:
         finishPositionCoordinate = finishPosition.get_position()
         finishPositionCoordinate[2] = self.hip_to_torso[2, 3] + self.walking_hip_height
         finishPosition.set_position(finishPositionCoordinate)
+
+        # Remove the roll and yaw from the designated position
+        [r, p, y] = finishPosition.get_orientation_euler()
+        q_new = tr.get_quaternion_from_euler([r, 0, 0])
+        finishPosition.set_orientation(q_new)
 
         self.robot_path = Robotpath(self.pose, finishPosition, self.foot_center_to_floor)
 
@@ -404,7 +437,7 @@ class Soccerbot:
             print(f'ang_vel = {ang_vel}')
         return np.concatenate((lin_acc, ang_vel))
 
-    def get_imu(self, verbose=False):
+    def get_imu(self):
         """
         Simulates the IMU at the IMU link location.
         TODO: Add noise model, make the refresh rate vary (currently in sync with the PyBullet time steps)
@@ -448,45 +481,109 @@ class Soccerbot:
             locations[index[1] + (index[0] * 2) + 4] = True
         return locations
 
-    Kp = 1
-    Kd = 0
-    Ki = 0.001
-    DESIRED_PITCH = 0.0
+    Kp = 0.8
+    Kd = 0.0
+    Ki = 0.0005
+    DESIRED_PITCH_1 = -0.05
+    integral1 = 0
+    last_F1 = 0
+    lastError1 = 0
 
-    def apply_imu_feedback(self, pose: tr):
+    def apply_imu_feedback(self, t: float, pose: tr):
         if pose is None:
             return
 
         [roll, pitch, yaw] = pose.get_orientation_euler()
 
-        error = Soccerbot.DESIRED_PITCH - pitch
-        derivative = error - self.pid_last_error
-        integral = 0
+        error = Soccerbot.DESIRED_PITCH_1 - pitch
+        derivative = error - self.lastError1
 
-        F = (self.Kp * error) + (self.Ki * integral) + (self.Kd * derivative)
+        F = (self.Kp * error) + (self.Ki * self.integral1) + (self.Kd * derivative)
         if F > 1.57:
             F = 1.57
         elif F < -1.57:
             F = -1.57
 
-        self.configuration_offset[Joints.LEFT_LEG_3] = F
-        self.configuration_offset[Joints.RIGHT_LEG_3] = F
-        self.last_F = F
-        self.lastError = error
+        [step_num, right_foot_step_ratio, left_foot_step_ratio] = self.robot_path.footHeightRatio(t)
+        [right_foot_action, left_foot_action] = self.robot_path.whatIsTheFootDoing(step_num)
+        # if len(right_foot_action) == 2: # Right foot moving
+        #     if F > 0:
+        #         self.configuration_offset[Joints.LEFT_LEG_2] = 0
+        #         self.configuration_offset[Joints.LEFT_LEG_3] = 0
+        #         self.configuration_offset[Joints.LEFT_LEG_4] = 0
+        #         self.configuration_offset[Joints.RIGHT_LEG_2] = F * right_foot_step_ratio * 10
+        #         self.configuration_offset[Joints.RIGHT_LEG_3] = 0
+        #         self.configuration_offset[Joints.RIGHT_LEG_4] = - F * right_foot_step_ratio * 10
+        #     pass
+        # elif len(left_foot_action) == 2: # Left foot moving
+        #     if F > 0:
+        #         self.configuration_offset[Joints.LEFT_LEG_2] = F * left_foot_step_ratio * 10
+        #         self.configuration_offset[Joints.LEFT_LEG_3] = 0
+        #         self.configuration_offset[Joints.LEFT_LEG_4] = - F * left_foot_step_ratio * 10
+        #         self.configuration_offset[Joints.RIGHT_LEG_2] = 0
+        #         self.configuration_offset[Joints.RIGHT_LEG_3] = 0
+        #         self.configuration_offset[Joints.RIGHT_LEG_4] = 0
+        #     pass
 
+        self.configuration_offset[Joints.LEFT_ARM_1] = 5 * F
+        self.configuration_offset[Joints.RIGHT_ARM_1] = 5 * F
 
-    HEAD_YAW_FREQ = 0.008
-    HEAD_PITCH_FREQ = 0.005
+        self.last_F1 = F
+        self.lastError1 = error
+        self.integral1 = self.integral1 + error
+        return F
+
+    Kp2 = 0.15
+    Kd2 = 0.0
+    Ki2 = 0.001
+    DESIRED_PITCH_2 = -0.05
+    integral2 = 0.0
+    last_F2 = 0
+    lastError2 = 0
+
+    def apply_imu_feedback_standing(self, pose: tr):
+        if pose is None:
+            return
+
+        [roll, pitch, yaw] = pose.get_orientation_euler()
+
+        error = Soccerbot.DESIRED_PITCH_2 - pitch
+        derivative = error - self.lastError2
+
+        F = (self.Kp2 * error) + (self.Ki2 * self.integral2) + (self.Kd2 * derivative)
+        if F > 1.57:
+            F = 1.57
+        elif F < -1.57:
+            F = -1.57
+
+        self.configuration_offset[Joints.LEFT_LEG_5] = F
+        self.configuration_offset[Joints.RIGHT_LEG_5] = F
+        self.last_F2 = F
+        self.lastError2 = error
+        self.integral2 = self.integral2 + error
+        # print(self.DESIRED_PITCH_2)
+        return pitch
+
+    def reset_imus(self):
+        self.integral1 = 0
+        self.pid_last_error1 = 0
+        self.last_F1 = 0
+        self.lastError1 = 0
+        self.integral2 = 0
+        self.pid_last_error2 = 0
+        self.last_F2 = 0
+        self.lastError2 = 0
+
+    HEAD_YAW_FREQ = 0.003
+    HEAD_PITCH_FREQ = 0.0035
+
     def apply_head_rotation(self):
-        self.configuration[Joints.HEAD_1] = math.cos(self.head_step * Soccerbot.HEAD_YAW_FREQ) * math.pi / 2
-        self.configuration[Joints.HEAD_2] = math.cos(self.head_step * Soccerbot.HEAD_PITCH_FREQ) * math.pi / 8 + math.pi / 6
+        self.configuration[Joints.HEAD_1] = math.cos(self.head_step * Soccerbot.HEAD_YAW_FREQ) * (math.pi / 3)
+        self.configuration[
+            Joints.HEAD_2] = 0.6  # math.cos(self.head_step * Soccerbot.HEAD_PITCH_FREQ) * math.pi / 8 + math.pi / 6
+
         self.head_step += 1
         pass
-
-    def reset_head(self):
-        self.configuration[Joints.HEAD_1] = 0
-        self.configuration[Joints.HEAD_2] = 0
-        self.head_step = 0
 
     def apply_foot_pressure_sensor_feedback(self, floor):
         foot_pressure_values = self.get_foot_pressure_sensors(floor)
@@ -495,12 +592,12 @@ class Soccerbot:
         if foot_pressure_values is None:
             return motor_forces
 
-        if (foot_pressure_values[0] and foot_pressure_values[1]) or (
-                foot_pressure_values[2] and foot_pressure_values[3]):  # Right foot on the ground
-            motor_forces[Joints.RIGHT_LEG_6] = 0.75
-        if (foot_pressure_values[4] and foot_pressure_values[5]) or (
-                foot_pressure_values[6] and foot_pressure_values[7]):  # Right foot on the ground
-            motor_forces[Joints.LEFT_LEG_6] = 0.75
+        # if (foot_pressure_values[0] and foot_pressure_values[1]) or (
+        #         foot_pressure_values[2] and foot_pressure_values[3]):  # Right foot on the ground
+        #     motor_forces[Joints.RIGHT_LEG_6] = 0.75
+        # if (foot_pressure_values[4] and foot_pressure_values[5]) or (
+        #         foot_pressure_values[6] and foot_pressure_values[7]):  # Right foot on the ground
+        #     motor_forces[Joints.LEFT_LEG_6] = 0.75
 
         # Synchronise walking speed
 

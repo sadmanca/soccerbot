@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     rospy.init_node("soccer_control")
     rospy.logwarn("Initializing Soccer Control")
-
+    rospy.sleep(1)
     if USE_RL_CONTROL:
         import soccerbot_controller_ros_rl
         walker = soccerbot_controller_ros_rl.SoccerbotControllerRosRl()

@@ -17,7 +17,7 @@ class Footpath(Path):
     half_to_full_step_time_ratio = 0.7 # Duration difference between half and full step
 
     foot_separation = 0.044 # seperation between feet and center
-    step_height = 0.034 # height of step
+    step_height = 0.065 # height of step
     step_outwardness = 0.015
     step_rotation = 0.05
 
@@ -75,7 +75,7 @@ class Footpath(Path):
                 first_foot_step_ratio = 1
             else:
                 first_foot_step_ratio = (adjusted_step_time - post_step_time) / (
-                            half_step_time - post_step_time - pre_step_time)
+                        half_step_time - post_step_time - pre_step_time)
         else:
             adjusted_step_time = t - half_step_time
 
@@ -95,7 +95,7 @@ class Footpath(Path):
                     first_foot_step_ratio = 1
                 else:
                     first_foot_step_ratio = (adjusted_step_time - post_step_time) / (
-                                full_step_time - post_step_time - pre_step_time)
+                            full_step_time - post_step_time - pre_step_time)
 
         # Second foot
         if t < half_step_time:
@@ -108,7 +108,7 @@ class Footpath(Path):
                 second_foot_step_ratio = 1
             else:
                 second_foot_step_ratio = (adjusted_step_time - post_step_time) / (
-                            half_step_time - post_step_time - pre_step_time)
+                        half_step_time - post_step_time - pre_step_time)
         else:
             adjusted_step_time = t - half_step_time
 
@@ -128,7 +128,7 @@ class Footpath(Path):
                     second_foot_step_ratio = 1
                 else:
                     second_foot_step_ratio = (adjusted_step_time - post_step_time) / (
-                                full_step_time - post_step_time - pre_step_time)
+                            full_step_time - post_step_time - pre_step_time)
 
         # Which foot is first?
         assert (first_foot_step_ratio <= 1)
@@ -240,6 +240,8 @@ class Footpath(Path):
             endTransform = deepcopy(endTransform)
             endTransform.set_position(endTransform.get_position() + delta_tr)
             distance_between_step = tr.get_distance(startTransform, endTransform)
+
+        assert (distance_between_step != 0.0)
         height_per_step = np.linalg.norm([zdiff, sidediff])
 
         h = height_per_step

@@ -3,6 +3,7 @@ import time
 import enum
 import numpy as np
 import torch
+import tqdm
 from model import Label, find_batch_bounding_boxes
 from my_dataset import initialize_loader
 from util import display_image, draw_bounding_boxes
@@ -27,7 +28,7 @@ class Trainer:
         self.output_folder = output_folder
         self.seed = seed
         self.optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate, weight_decay=weight_decay)
-        self.class_weights = torch.tensor(class_weights)  # weigh importance of the label during training
+        self.class_weights = torch.tensor(class_weights).float()  # weigh importance of the label during training
         self.criterion = torch.nn.CrossEntropyLoss(weight=self.class_weights.cuda())
 
         torch.manual_seed(seed)
@@ -59,6 +60,7 @@ class Trainer:
         for epoch in range(self.epochs):
             self.train_epoch(epoch)
             self.test_model('valid', epoch)
+            torch.save(self.model.state_dict(), self.output_folder+'/model'+str(epoch))
 
         self.test_model('test', 'test')
 
@@ -73,6 +75,7 @@ class Trainer:
         batchload_times = []
         losses = []
         t_readimg = time.time()
+
         for images, masks, img_paths in self.train_loader:
             batchload_times.append(time.time() - t_readimg)
 
@@ -116,7 +119,7 @@ class Trainer:
 
             bbxs = find_batch_bounding_boxes(outputs)
             self.update_batch_stats(stats, bbxs, masks, dataset, indexes)
-
+        '''
         # Show sample image with bounding boxes to get feel for what model is learning
         for i in range(1):
             img = draw_bounding_boxes(images[i], bbxs[i][Label.BALL.value], (255, 0, 0))  # balls
@@ -130,7 +133,7 @@ class Trainer:
                 (outputs[i][Label.BALL.value], 'gray', 'Ball'),
                 (outputs[i][Label.ROBOT.value], 'gray', 'Robot')
             ])
-
+        '''
         self.valid_losses.append(np.sum(losses) / len(losses))
         time_elapsed = time.time() - start_valid
 
@@ -157,7 +160,9 @@ class Trainer:
             self.precision = 0.0
             if tp + fp > 0:
                 self.precision = tp / (tp + fp)
-            self.recall = tp / (tp + fn)
+            if tp + fn > 0:
+                self.recall = tp / (tp + fn)
+
             print('{:>20} {} tp:{:6d}, fp:{:6d}, tn:{:6d}, proxy_fn:{:6d}, ' \
                   'precision:{:.4f}, recall:{:.4f}, total {}'.format(
                 '', label.name, tp, fp, tn, fn,

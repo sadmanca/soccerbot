@@ -1,8 +1,8 @@
 
 freq: 30.0
-sensor_timeout: 1.0
+sensor_timeout: 0.1
 odom_used: true
 imu_used: true
 vo_used: false
-debug: true
-self_diagnose: true
+debug: false
+self_diagnose: false
