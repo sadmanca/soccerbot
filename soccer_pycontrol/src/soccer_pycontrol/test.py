@@ -8,9 +8,9 @@ if "ROS_NAMESPACE" not in os.environ:
     os.environ["ROS_NAMESPACE"] = "/robot1"
 
 
-import soccerbot_controller
+import walking_controller
 
-from soccer_pycontrol.src.transformation import Transformation
+from transformation import Transformation
 RUN_RL = True
 RUN_IN_ROS = True
 if RUN_IN_ROS:
@@ -18,7 +18,7 @@ if RUN_IN_ROS:
     from std_msgs.msg import String
     from geometry_msgs.msg import PoseWithCovarianceStamped, Pose2D
 
-class Test(TestCase):
+class WalkingTest(TestCase):
 
     def setUp(self) -> None:
         if RUN_IN_ROS:
@@ -28,14 +28,13 @@ class Test(TestCase):
             b.data = ""
             resetPublisher.publish(b)
             if RUN_RL:
-                import soccerbot_controller_ros_rl
-                self.walker = soccerbot_controller_ros_rl.SoccerbotControllerRosRl()
+                import walking_controller_ros_rl
+                self.walker = walking_controller_ros_rl.WalkingControllerRosRl()
             else:
-                import soccerbot_controller_ros
-                self.walker = soccerbot_controller_ros.SoccerbotControllerRos()
+                import walking_controller_ros
+                self.walker = walking_controller_ros.WalkingControllerRos()
         else:
-            self.walker = soccerbot_controller.SoccerbotController()
-
+            self.walker = walking_controller.WalkingController()
 
     def test_walk_1(self):
         self.walker.setPose(Transformation([0.5, 0, 0], [0, 0, 0, 1]))
@@ -236,7 +235,7 @@ class Test(TestCase):
 
     def test_imu_feedback_webots(self):
         import pybullet as pb
-        from soccerbot_controller import SoccerbotController
+        from walking_controller import WalkingController
 
         self.walker.setPose(Transformation([0, 0, 0], [0, 0, 0, 1]))
         self.walker.ready()
@@ -254,7 +253,7 @@ class Test(TestCase):
         pitches = []
         times = []
         t = 0
-        r = rospy.Rate(1/SoccerbotController.PYBULLET_STEP)
+        r = rospy.Rate(1 / WalkingController.PYBULLET_STEP)
 
         while t <= self.walker.soccerbot.robot_path.duration():
             if self.walker.soccerbot.current_step_time <= t <= self.walker.soccerbot.robot_path.duration():
@@ -378,4 +377,20 @@ class Test(TestCase):
 
     def amcl_pose_callback(self, amcl_pose):
         self.amcl_pose = amcl_pose
+        pass
+
+
+import action_controller
+
+class ActionTest(TestCase):
+
+    def setUp(self) -> None:
+        self.action_controller = action_controller.ActionController()
+
+    def test_basic_kick_1(self):
+        # TODO create a ball @shahryar
+        # self.action_controller.ball.set_position()
+        # self.action_controller.ball.set_velocity()
+        # self.action_controller.soccerbot.setPose()
+        self.action_controller.run("kick")
         pass

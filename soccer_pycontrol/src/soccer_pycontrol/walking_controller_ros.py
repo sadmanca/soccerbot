@@ -1,14 +1,14 @@
 import numpy as np
 import tf
 
-from soccerbot_controller import *
+from walking_controller import *
 import rospy
 from soccerbot_ros import SoccerbotRos
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Pose, PoseArray
 from std_msgs.msg import Empty, Bool
 
 
-class SoccerbotControllerRos(SoccerbotController):
+class WalkingControllerRos(WalkingController):
 
     def __init__(self):
         if os.getenv('ENABLE_PYBULLET', False):
@@ -118,13 +118,13 @@ class SoccerbotControllerRos(SoccerbotController):
 
     def wait(self, steps: int):
         for i in range(steps):
-            rospy.sleep(SoccerbotController.PYBULLET_STEP)
+            rospy.sleep(WalkingController.PYBULLET_STEP)
             if os.getenv('ENABLE_PYBULLET', False):
                 pb.stepSimulation()
 
     def run(self, stop_on_completed_trajectory=False):
         t = 0
-        r = rospy.Rate(1 / SoccerbotController.PYBULLET_STEP)
+        r = rospy.Rate(1 / WalkingController.PYBULLET_STEP)
         stable_count = 5
         self.soccerbot.ready()
         self.soccerbot.reset_imus()
@@ -163,7 +163,7 @@ class SoccerbotControllerRos(SoccerbotController):
                 self.soccerbot.current_step_time = self.soccerbot.current_step_time + self.soccerbot.robot_path.step_size
                 self.soccerbot.publishOdometry()
 
-            if self.soccerbot.robot_path is not None and t <= self.soccerbot.robot_path.duration() < t + SoccerbotController.PYBULLET_STEP:
+            if self.soccerbot.robot_path is not None and t <= self.soccerbot.robot_path.duration() < t + WalkingController.PYBULLET_STEP:
                 rospy.loginfo("Completed Walk")
                 walk_time = (rospy.Time.now().secs + (rospy.Time.now().nsecs / 100000000) - (time_now.secs + (time_now.nsecs / 100000000)))
                 print(walk_time)
@@ -205,7 +205,7 @@ class SoccerbotControllerRos(SoccerbotController):
                 if os.getenv('ENABLE_PYBULLET', False):
                     pb.stepSimulation()
 
-            t = t + SoccerbotController.PYBULLET_STEP
+            t = t + WalkingController.PYBULLET_STEP
             r.sleep()
 
     def correct_goal_pose(self):

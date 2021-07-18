@@ -10,7 +10,7 @@ if os.getenv('ENABLE_PYBULLET', False):
     import pybullet_data
 
 
-class SoccerbotController:
+class WalkingController:
     PYBULLET_STEP = 0.004
 
     def __init__(self):
@@ -39,7 +39,7 @@ class SoccerbotController:
 
     def wait(self, steps):
         for i in range(steps):
-            time.sleep(SoccerbotController.PYBULLET_STEP)
+            time.sleep(WalkingController.PYBULLET_STEP)
             if os.getenv('ENABLE_PYBULLET', False):
                 pb.stepSimulation()
 
@@ -62,8 +62,8 @@ class SoccerbotController:
                 self.soccerbot.current_step_time = self.soccerbot.current_step_time + self.soccerbot.robot_path.step_size
             if os.getenv('ENABLE_PYBULLET', False):
                 pb.stepSimulation()
-            t = t + SoccerbotController.PYBULLET_STEP
-            sleep(SoccerbotController.PYBULLET_STEP)
+            t = t + WalkingController.PYBULLET_STEP
+            sleep(WalkingController.PYBULLET_STEP)
 
     def updateGoal(self):
         pass

@@ -1,11 +1,11 @@
 import functools
 
 import numpy as np
-from footpath import Footpath
+from path_foot import PathFoot
 from transformation import Transformation as tr
 import math
 
-class Crotchpath(Footpath):
+class PathTorso(PathFoot):
 
     crotch_zdiff_sway = 0.000
     crotch_sidediff_sway = -0.03

@@ -1,4 +1,4 @@
-from soccerbot_controller_ros import *
+from walking_controller_ros import *
 from soccerbot_ros_rl import SoccerbotRosRl
 
 import gym
@@ -16,7 +16,7 @@ checkpoint_path = "/home/shahryar/hdd/catkin_ws/src/soccerbot/soccer_pycontrol/s
 #"./soccer_rlcontrol/results/humanoid-ars/ARS_gym_soccerbot:walk-forward-norm-v1_f29f6_00000_0_2021-06-05_18-39-54/checkpoint_015000/checkpoint-15000"
 
 
-class SoccerbotControllerRosRl(SoccerbotControllerRos):
+class WalkingControllerRosRl(WalkingControllerRos):
 
     def __init__(self):
 
@@ -63,7 +63,7 @@ class SoccerbotControllerRosRl(SoccerbotControllerRos):
         return t
 
     def wait(self, steps):
-        rospy.sleep(SoccerbotController.PYBULLET_STEP * steps)
+        rospy.sleep(WalkingController.PYBULLET_STEP * steps)
 
     def run(self):
         r = rospy.Rate(120)
