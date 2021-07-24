@@ -6,5 +6,5 @@
     <arg name="competition" default="$(optenv COMPETITION true)" />
 
     <node pkg="soccer_strategy" type="main.py" name="soccer_strategy" output="screen" respawn="true"/>
-    <node pkg="soccer_strategy" type="game_controller_receiver.py" name="game_controller_receiver" output="screen" if="$(arg competition)"/>
+    <node pkg="soccer_strategy" type="game_controller_receiver.py" name="game_controller_receiver" output="screen" if="$(arg competition)"  />
 </launch>

@@ -29,7 +29,7 @@ class GameEngineCompetition(game_engine.GameEngine):
     STRATEGY_UPDATE_INTERVAL = 1
     NAV_GOAL_UPDATE_INTERVAL = 2
     blue_initial_position = [[0, -3.5, 1.57], [0, -1, 1.57], [-1.75, -1.5, 1.57]]
-    red_initial_position = [[0, 3.5, -1.57], [-2.5, 0.9, -1.57], [-1.75, 1.5, -1.57]]
+    red_initial_position = [[0, 3.5, -1.57], [-0.9, 0.9, -1.57], [-1.75, 1.5, -1.57]]
 
     blue_start_position = [[-4, -3.6, 1.57], [-1, -3.6, 1.57], [-4, 3.6, -1.57]]
     red_start_position = [[4, -3.6, 1.57], [1, -3.6, 1.57], [4, 3.6, -1.57]]
