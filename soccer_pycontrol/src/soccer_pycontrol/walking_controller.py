@@ -5,7 +5,7 @@ from soccerbot import Soccerbot
 from ramp import Ramp
 import rospy
 import time
-if os.getenv('ENABLE_PYBULLET', False):
+if os.getenv('ENABLE_PYBULLET', True):
     import pybullet as pb
     import pybullet_data
 
@@ -14,7 +14,7 @@ class WalkingController:
     PYBULLET_STEP = 0.004
 
     def __init__(self):
-        if os.getenv('ENABLE_PYBULLET', False):
+        if os.getenv('ENABLE_PYBULLET', True):
             if os.getenv('COMPETITION', False):
                 pb.connect(pb.DIRECT)
             else:
@@ -40,7 +40,7 @@ class WalkingController:
     def wait(self, steps):
         for i in range(steps):
             time.sleep(WalkingController.PYBULLET_STEP)
-            if os.getenv('ENABLE_PYBULLET', False):
+            if os.getenv('ENABLE_PYBULLET', True):
                 pb.stepSimulation()
 
     def run(self, stop_on_completed_trajectory=False):
@@ -53,14 +53,14 @@ class WalkingController:
                 self.soccerbot.stepPath(t, verbose=False)
                 self.soccerbot.apply_imu_feedback(t, self.soccerbot.get_imu())
                 forces = self.soccerbot.apply_foot_pressure_sensor_feedback(self.ramp.plane)
-                if os.getenv('ENABLE_PYBULLET', False):
+                if os.getenv('ENABLE_PYBULLET', True):
                     pb.setJointMotorControlArray(bodyIndex=self.soccerbot.body, controlMode=pb.POSITION_CONTROL,
                                              jointIndices=list(range(0, 20, 1)),
                                              targetPositions=self.soccerbot.get_angles(),
                                              forces=forces
                                              )
                 self.soccerbot.current_step_time = self.soccerbot.current_step_time + self.soccerbot.robot_path.step_size
-            if os.getenv('ENABLE_PYBULLET', False):
+            if os.getenv('ENABLE_PYBULLET', True):
                 pb.stepSimulation()
             t = t + WalkingController.PYBULLET_STEP
             sleep(WalkingController.PYBULLET_STEP)

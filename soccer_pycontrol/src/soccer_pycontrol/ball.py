@@ -1,26 +1,37 @@
 import os
 import rospy
-if os.getenv('ENABLE_PYBULLET', False):
+from os.path import expanduser
+
+if os.getenv('ENABLE_PYBULLET', True):
     import pybullet as p
 
 
 class Ball:
 
-    def __init__(self, position=[0,0], velocity=[0,0]):
+    def __init__(self, position=[0, 0], velocity=[0, 0]):
         self.position = position
         self.velocity = velocity
-        self.path = 'TODO hardcode'
-        self.plane = p.loadURDF(self.path, basePosition=[0, 0, 0],
-                                baseOrientation=[0, 0, 0, 1])
+        home = expanduser("~")
+        if os.environ['USER'] == 'shahryar':
+            home = home + "/hdd"
 
-    def set_position(self):
-        pass
+        self.path = home + "/catkin_ws/src/soccerbot/soccer_description/models/Ball/ball.urdf"
+        if os.getenv('ENABLE_PYBULLET', True):
+            self.ball = p.loadURDF(self.path, basePosition=self.position,
+                                   baseOrientation=[0, 0, 0, 1])
 
-    def set_velocity(self):
-        pass
+    def set_position(self, position):
+        if os.getenv('ENABLE_PYBULLET', True):
+            p.removeBody(self.ball)
+        self.__init__(position, self.velocity)
+
+    def set_velocity(self, velocity):
+        if os.getenv('ENABLE_PYBULLET', True):
+            p.removeBody(self.ball)
+        self.__init__(self.position, velocity)
 
     def get_position(self):
-        pass
+        return self.position
 
     def get_velocity(self):
-        pass
+        return self.velocity

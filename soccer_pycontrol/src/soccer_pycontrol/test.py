@@ -11,8 +11,8 @@ if "ROS_NAMESPACE" not in os.environ:
 import walking_controller
 
 from transformation import Transformation
-RUN_RL = True
-RUN_IN_ROS = True
+RUN_RL = False
+RUN_IN_ROS = False
 if RUN_IN_ROS:
     import rospy
     from std_msgs.msg import String
@@ -37,27 +37,12 @@ class WalkingTest(TestCase):
             self.walker = walking_controller.WalkingController()
 
     def test_walk_1(self):
+        self.setUp()
         self.walker.setPose(Transformation([0.5, 0, 0], [0, 0, 0, 1]))
         self.walker.ready()
         self.walker.wait(100)
         self.walker.setGoal(Transformation([2, 0, 0], [0, 0, 0, 1]))
-        # self.walker.soccerbot.robot_path.show()
-        self.walker.run()
-
-    def test_walk_1_rl(self):
-        from geometry_msgs.msg import PoseStamped
-        self.walker.setPose(Transformation([0, 0, 0], [0, 0, 0, 1]))
-        self.walker.wait(100)
-        self.walker.ready()
-        self.walker.wait(200)
-        self.walker.new_goal = PoseStamped()
-        self.walker.new_goal.pose.position.x = 5
-        self.walker.new_goal.pose.position.y = 0
-        self.walker.new_goal.pose.position.z = 0
-        self.walker.new_goal.pose.orientation.x = 0
-        self.walker.new_goal.pose.orientation.y = 0
-        self.walker.new_goal.pose.orientation.z = 0
-        self.walker.new_goal.pose.orientation.w = 1
+        self.walker.soccerbot.robot_path.show()
         self.walker.run()
 
     def test_walk_2(self):
@@ -389,8 +374,8 @@ class ActionTest(TestCase):
 
     def test_basic_kick_1(self):
         # TODO create a ball @shahryar
-        # self.action_controller.ball.set_position()
-        # self.action_controller.ball.set_velocity()
-        # self.action_controller.soccerbot.setPose()
+        self.action_controller.ball.set_position()
+        self.action_controller.ball.set_velocity()
+        self.action_controller.soccerbot.setPose()
         self.action_controller.run("kick")
         pass

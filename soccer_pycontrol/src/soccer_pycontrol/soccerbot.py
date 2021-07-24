@@ -9,7 +9,7 @@ from copy import deepcopy
 import numpy as np
 import rospy
 
-if os.getenv('ENABLE_PYBULLET', False):
+if os.getenv('ENABLE_PYBULLET', True):
     import pybullet as pb
 
 
@@ -84,7 +84,7 @@ class Soccerbot:
         :param link2: Ending link
         :return: H-transform from starting link to the ending link
         """
-        if os.getenv('ENABLE_PYBULLET', False):
+        if os.getenv('ENABLE_PYBULLET', True):
             if link1 == Links.TORSO:
                 link1world = pb.getBasePositionAndOrientation(self.body)
                 link1world = (tuple(np.subtract(link1world[0], tuple(self.pybullet_offset))), (0, 0, 0, 1))
@@ -130,7 +130,7 @@ class Soccerbot:
         home = expanduser("~")
         if os.environ['USER'] == 'shahryar':
             home = home + "/hdd"
-        if os.getenv('ENABLE_PYBULLET', False):
+        if os.getenv('ENABLE_PYBULLET', True):
             self.body = pb.loadURDF(home + "/catkin_ws/src/soccerbot/soccer_description/models/soccerbot_stl.urdf",
                                     useFixedBase=useFixedBase,
                                     flags=pb.URDF_USE_INERTIA_FROM_FILE,
@@ -172,7 +172,7 @@ class Soccerbot:
         self.configuration = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.configuration_offset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.max_forces = []
-        if os.getenv('ENABLE_PYBULLET', False):
+        if os.getenv('ENABLE_PYBULLET', True):
             for i in range(0, 20):
                 self.max_forces.append(pb.getJointInfo(self.body, i)[10])
 
@@ -217,7 +217,7 @@ class Soccerbot:
 
         self.configuration_offset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-        if os.getenv('ENABLE_PYBULLET', False):
+        if os.getenv('ENABLE_PYBULLET', True):
             pb.setJointMotorControlArray(bodyIndex=self.body,
                                          controlMode=pb.POSITION_CONTROL,
                                          jointIndices=list(range(0, 20, 1)),
@@ -300,7 +300,7 @@ class Soccerbot:
         [r, p, y] = pose.get_orientation_euler()
         q_new = tr.get_quaternion_from_euler([r, 0, 0])
         self.pose.set_orientation(q_new)
-        if os.getenv('ENABLE_PYBULLET', False):
+        if os.getenv('ENABLE_PYBULLET', True):
             pb.resetBasePositionAndOrientation(self.body, self.pose.get_position(), self.pose.get_orientation())
 
     def setGoal(self, finishPosition: tr):

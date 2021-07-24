@@ -11,7 +11,7 @@ from std_msgs.msg import Empty, Bool
 class WalkingControllerRos(WalkingController):
 
     def __init__(self):
-        if os.getenv('ENABLE_PYBULLET', False):
+        if os.getenv('ENABLE_PYBULLET', True):
             import pybullet as pb
             if os.getenv('COMPETITION', False):
                 pb.connect(pb.DIRECT)
@@ -119,7 +119,7 @@ class WalkingControllerRos(WalkingController):
     def wait(self, steps: int):
         for i in range(steps):
             rospy.sleep(WalkingController.PYBULLET_STEP)
-            if os.getenv('ENABLE_PYBULLET', False):
+            if os.getenv('ENABLE_PYBULLET', True):
                 pb.stepSimulation()
 
     def run(self, stop_on_completed_trajectory=False):
@@ -153,7 +153,7 @@ class WalkingControllerRos(WalkingController):
                 self.soccerbot.stepPath(t, verbose=False)
                 self.soccerbot.apply_imu_feedback(t, self.soccerbot.get_imu())
 
-                if os.getenv('ENABLE_PYBULLET', False):
+                if os.getenv('ENABLE_PYBULLET', True):
                     forces = self.soccerbot.apply_foot_pressure_sensor_feedback(self.ramp.plane)
                     pb.setJointMotorControlArray(bodyIndex=self.soccerbot.body, controlMode=pb.POSITION_CONTROL,
                                                  jointIndices=list(range(0, 20, 1)),
@@ -202,7 +202,7 @@ class WalkingControllerRos(WalkingController):
 
             if not self.terminate_walk and not self.fixed_trajectory_running:
                 self.soccerbot.publishAngles()  # Disable to stop walking
-                if os.getenv('ENABLE_PYBULLET', False):
+                if os.getenv('ENABLE_PYBULLET', True):
                     pb.stepSimulation()
 
             t = t + WalkingController.PYBULLET_STEP
