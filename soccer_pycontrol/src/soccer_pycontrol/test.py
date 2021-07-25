@@ -37,7 +37,6 @@ class WalkingTest(TestCase):
             self.walker = walking_controller.WalkingController()
 
     def test_walk_1(self):
-        self.setUp()
         self.walker.setPose(Transformation([0.5, 0, 0], [0, 0, 0, 1]))
         self.walker.ready()
         self.walker.wait(100)
@@ -374,8 +373,12 @@ class ActionTest(TestCase):
 
     def test_basic_kick_1(self):
         # TODO create a ball @shahryar
-        self.action_controller.ball.set_position()
-        self.action_controller.ball.set_velocity()
-        self.action_controller.soccerbot.setPose()
+        self.action_controller.ball.set_position((0.15, 0, 0.1))
+        # self.action_controller.ball.set_velocity([0, 0])
+        self.action_controller.soccerbot.setPose(Transformation([0, 0, 0], [0.00000, 0, 0, 1]))
+        self.action_controller.soccerbot.ready()
+        print("Getting ready")
+        self.action_controller.wait(150)
+
         self.action_controller.run("kick")
         pass

@@ -7,7 +7,6 @@ import math
 from os.path import expanduser
 from copy import deepcopy
 import numpy as np
-import rospy
 
 if os.getenv('ENABLE_PYBULLET', True):
     import pybullet as pb
@@ -68,6 +67,53 @@ class Soccerbot:
     pybullet_offset = [0.0082498, -0.0017440, -0.0522479]
     arm_0_center = -0.45
     arm_1_center = np.pi * 0.8
+    #### Joint Limits HARD CODE
+    _joint_limit_high = np.zeros(16)
+
+    _joint_limit_high[Joints.RIGHT_LEG_1] = 0.2
+    _joint_limit_high[Joints.RIGHT_LEG_2] = 0.2
+    _joint_limit_high[Joints.RIGHT_LEG_3] = 0.67
+    _joint_limit_high[Joints.RIGHT_LEG_4] = 0.05
+    _joint_limit_high[Joints.RIGHT_LEG_5] = 0.2  # 0.5
+    _joint_limit_high[Joints.RIGHT_LEG_6] = 0.15
+    _joint_limit_high[Joints.LEFT_LEG_1] = 0.2
+    _joint_limit_high[Joints.LEFT_LEG_2] = 0.2
+    _joint_limit_high[Joints.LEFT_LEG_3] = 0.67
+    _joint_limit_high[Joints.LEFT_LEG_4] = 0.05
+    _joint_limit_high[Joints.LEFT_LEG_5] = 0.2  # 0.5
+    _joint_limit_high[Joints.LEFT_LEG_6] = 0.15
+    _joint_limit_high[Joints.RIGHT_ARM_1] = 0.95
+    _joint_limit_high[Joints.RIGHT_ARM_2] = 0.8
+    _joint_limit_high[Joints.LEFT_ARM_1] = 0.95
+    _joint_limit_high[Joints.LEFT_ARM_2] = 0.8
+
+    _joint_limit_high *= (np.pi)
+
+    _joint_limit_low = np.zeros(16)
+
+    _joint_limit_low[Joints.RIGHT_LEG_1] = 0.3
+    _joint_limit_low[Joints.RIGHT_LEG_2] = 0.1
+    _joint_limit_low[Joints.RIGHT_LEG_3] = 0.2
+    _joint_limit_low[Joints.RIGHT_LEG_4] = 0.45
+    _joint_limit_low[Joints.RIGHT_LEG_5] = 0.12
+    _joint_limit_low[Joints.RIGHT_LEG_6] = 0.1
+    _joint_limit_low[Joints.LEFT_LEG_1] = 0.3
+    _joint_limit_low[Joints.LEFT_LEG_2] = 0.1
+    _joint_limit_low[Joints.LEFT_LEG_3] = 0.2
+    _joint_limit_low[Joints.LEFT_LEG_4] = 0.45
+    _joint_limit_low[Joints.LEFT_LEG_5] = 0.12
+    _joint_limit_low[Joints.LEFT_LEG_6] = 0.1
+    _joint_limit_low[Joints.RIGHT_ARM_1] = 0.4
+    _joint_limit_low[Joints.RIGHT_ARM_2] = 0.0
+    _joint_limit_low[Joints.LEFT_ARM_1] = 0.4
+    _joint_limit_low[Joints.LEFT_ARM_2] = 0.0
+
+    _joint_limit_low *= (-np.pi)
+
+    _AX_12_force = 1.5
+    _MX_28_force = 2.5
+    _AX_12_velocity = (59 / 60) * 2 * np.pi
+    _MX_28_velocity = 2 * np.pi
 
     def get_angles(self):
         """
@@ -131,7 +177,7 @@ class Soccerbot:
         if os.environ['USER'] == 'shahryar':
             home = home + "/hdd"
         if os.getenv('ENABLE_PYBULLET', True):
-            self.body = pb.loadURDF(home + "/catkin_ws/src/soccerbot/soccer_description/models/soccerbot_stl.urdf",
+            self.body = pb.loadURDF(home + "/catkin_ws/src/soccerbot/soccer_description/models/soccerbot_box.urdf",
                                     useFixedBase=useFixedBase,
                                     flags=pb.URDF_USE_INERTIA_FROM_FILE,
                                     basePosition=[pose.get_position()[0], pose.get_position()[1],
@@ -214,9 +260,30 @@ class Soccerbot:
         # head
         self.configuration[Joints.HEAD_1] = 0
         self.configuration[Joints.HEAD_2] = 0
+        standing_poses = [0.] * (20)
+        standing_poses[Joints.RIGHT_LEG_1] = 0.0
+        standing_poses[Joints.RIGHT_LEG_2] = 0.05
+        standing_poses[Joints.RIGHT_LEG_3] = 0.4
+        standing_poses[Joints.RIGHT_LEG_4] = -0.8
+        standing_poses[Joints.RIGHT_LEG_5] = 0.4
+        standing_poses[Joints.RIGHT_LEG_6] = -0.05
 
+        standing_poses[Joints.LEFT_LEG_1] = 0.0
+        standing_poses[Joints.LEFT_LEG_2] = 0.05
+        standing_poses[Joints.LEFT_LEG_3] = 0.4
+        standing_poses[Joints.LEFT_LEG_4] = -0.8
+        standing_poses[Joints.LEFT_LEG_5] = 0.4
+        standing_poses[Joints.LEFT_LEG_6] = -0.05
+
+        standing_poses[Joints.HEAD_1] = 0.0
+        standing_poses[Joints.HEAD_2] = 0.0
+
+        standing_poses[Joints.LEFT_ARM_1] = 0.0
+        standing_poses[Joints.LEFT_ARM_2] = 2.8
+        standing_poses[Joints.RIGHT_ARM_1] = 0.0
+        standing_poses[Joints.RIGHT_ARM_2] = 2.8
         self.configuration_offset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
+        self.configuration_offset = np.array(standing_poses)
         if os.getenv('ENABLE_PYBULLET', True):
             pb.setJointMotorControlArray(bodyIndex=self.body,
                                          controlMode=pb.POSITION_CONTROL,
@@ -602,3 +669,70 @@ class Soccerbot:
         # Synchronise walking speed
 
         return motor_forces
+
+    def joints_pos(self):
+
+        joint_states = pb.getJointStates(self.body, list(range(0, 16, 1)))
+        joints_pos = np.array([state[0] for state in joint_states], dtype=np.float32)
+        # joints_pos = np.unwrap(joints_pos + np.pi) - np.pi
+
+        return joints_pos
+
+    def joints_vel(self):
+        joint_states = pb.getJointStates(self.body, list(range(0, 16, 1)))
+        joints_vel = np.array([state[1] for state in joint_states], dtype=np.float32)
+        # joints_pos = np.unwrap(joints_pos + np.pi) - np.pi
+
+        return joints_vel
+
+    def _global_orn(self):
+        _, orn = pb.getBasePositionAndOrientation(self.body)
+        return np.array(orn, dtype=np.float32)
+
+    def off_orn(self):
+        distance_unit_vec = ((0, 0.3) - self.global_pos()[0:2])
+        distance_unit_vec /= np.linalg.norm(distance_unit_vec)
+        mat = pb.getMatrixFromQuaternion(pb.getBasePositionAndOrientation(self.body)[1])
+        d2_vect = np.array([mat[0], mat[3]], dtype=np.float32)
+        d2_vect /= np.linalg.norm(d2_vect)
+        cos = np.dot(d2_vect, distance_unit_vec)
+        sin = np.linalg.norm(np.cross(distance_unit_vec, d2_vect))
+        vec = np.array([cos, sin], dtype=np.float32)
+        # print(f'Orn: {vec}')
+        vec = np.matmul([[0, 1], [-1, 0]], vec)
+        return vec
+
+    def global_pos(self):
+
+        pos, _ = pb.getBasePositionAndOrientation(self.body)
+        return np.array(pos, dtype=np.float32)
+
+    def motor_control(self, action, joint_angles, env):
+        _MX_28_velocity = 2 * np.pi
+        # CLIP ACTIONS
+        # action = np.clip(action, self._joint_limit_low, self._joint_limit_high)
+        # MX-28s
+        gain = 0.78
+        for i in range(Joints.LEFT_ARM_1, Joints.HEAD_1, 1):
+            joint_cur_pos = pb.getJointState(self.body, i)[0]
+            velocity = action[i]
+            velocity = velocity if joint_cur_pos < env._joint_limit_high[i] else -_MX_28_velocity
+            velocity = velocity if joint_cur_pos > env._joint_limit_low[i] else _MX_28_velocity
+            if velocity != action[i]:
+                print(f'***** Joint {i} capped')
+            action[i] = velocity
+            pb.setJointMotorControl2(bodyIndex=self.body,
+                                    controlMode=pb.VELOCITY_CONTROL,
+                                    jointIndex=i,
+                                    targetVelocity=velocity,
+                                    velocityGain=gain,
+                                    maxVelocity=_MX_28_velocity,
+                                    force=2.5,
+                                    )
+        # pb.setJointMotorControlArray(bodyIndex=self.body,
+        #                                 controlMode=pb.VELOCITY_CONTROL,
+        #                                 jointIndices=list(range(Joints.HEAD_1)),
+        #                                 targetVelocities=action,
+        #                                 velocityGains=[gain] * Joints.HEAD_1,
+        #                                 forces=[2.5] * Joints.HEAD_1,
+        #                                 )

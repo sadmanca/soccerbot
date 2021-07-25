@@ -1,5 +1,5 @@
 import os
-import rospy
+import numpy as np
 from os.path import expanduser
 
 if os.getenv('ENABLE_PYBULLET', True):
@@ -8,7 +8,7 @@ if os.getenv('ENABLE_PYBULLET', True):
 
 class Ball:
 
-    def __init__(self, position=[0, 0], velocity=[0, 0]):
+    def __init__(self, position=(0, 0, 0), velocity=[0, 0]):
         self.position = position
         self.velocity = velocity
         home = expanduser("~")
@@ -31,7 +31,8 @@ class Ball:
         self.__init__(self.position, velocity)
 
     def get_position(self):
-        return self.position
+        pos, _ = p.getBasePositionAndOrientation(self.ball)
+        return np.array(pos, dtype=np.float32)[0:2]
 
     def get_velocity(self):
         return self.velocity

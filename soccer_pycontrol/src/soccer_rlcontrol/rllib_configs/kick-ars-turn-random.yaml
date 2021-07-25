@@ -1,0 +1,62 @@
+kick-ars-random-turn:
+    env: gym_soccerbot:norm-v0
+    run: ARS
+    checkpoint_freq: 50
+    max_failures: 10
+    checkpoint_at_end: true
+    local_dir: ./results/
+    stop:
+        timesteps_total: 1000000000
+    config:
+        # Works for both torch and tf.
+        framework: tf
+        env_config:
+            env_name: gym_soccerbot:kick-v0
+            goal:
+                    - 2
+                    - 0
+            ball_start:
+                    - 0.3
+                    - 0.0
+            # start_ang: !!float 15.
+            random_joint_vel: !!float 0.02    # Between 0-1
+            random_start_vel:
+                    - !!float 0.1   # x linear velocity bound
+                    - !!float 0.1   # y linear velocity bound
+                    - !!float 0.1   # z linear velocity bound
+                    - !!float 0.1   # x angular velocity bound
+                    - !!float 0.1   # y angular velocity bound
+                    - !!float 0.1   # z angular velocity bound
+            random_tilt: !!float 0.1    # Max: Sqrt(1/2)
+            random_joint_angles: true
+            horizon: 240
+            warm_up: true
+        extra_python_environs_for_driver:
+            OMP_NUM_THREADS: 1
+        num_workers: 12
+        # remote_worker_envs: true
+        num_cpus_per_worker: 0.5
+        num_envs_per_worker: 1
+        horizon: 240
+        num_gpus: 0
+        model:
+            fcnet_hiddens: [128, 128]
+            fcnet_activation: tanh
+        action_noise_std: 0.0001
+        noise_stdev: 0.01 # 0.02  # std deviation of parameter noise
+        num_rollouts: 96  # number of perturbs to try
+        rollouts_used: 96  # number of perturbs to keep in gradient estimate
+        # num_workers: 32,
+        sgd_stepsize: 0.01 #0.01  # sgd step-size
+        observation_filter: MeanStdFilter
+        noise_size: 250000000
+        eval_prob: 0.03  # probability of evaluating the parameter rewards
+        report_length: 10  # how many of the last rewards we average over
+        offset: 0
+        # ARS will use Trainer's evaluation WorkerSet (if evaluation_interval > 0).
+        # Therefore, we must be careful not to use more than 1 env per eval worker
+        # (would break ARSPolicy's compute_action method) and to not do obs-
+        # filtering.
+        evaluation_config:
+            num_envs_per_worker: 1
+            observation_filter: NoFilter
