@@ -65,7 +65,7 @@ iniconfig==1.1.1
 intel-tensorflow==2.4.0
 interactive-markers==1.12.0
 ipaddr==2.2.0
-joblib==1.0.1
+joblib==1.2.0
 joint-state-publisher==1.15.0
 joint-state-publisher-gui==1.15.0
 jsonschema==3.2.0
